@@ -1,27 +1,61 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-// TODO
-// Add SDKs for Firebase products that you want to use
+import { getAuth, signInWithPopup, GoogleAuthProvider, inMemoryPersistence, setPersistence, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+import { collection, addDoc, getFirestore, getDocs, query, orderBy, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"; 
+// TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  // TODO
-  // your firebase configuration
+  apiKey: "AIzaSyCISu1H44SHoSXBodLjDAmcTuJZfp1CokI",
+  authDomain: "test1216-2139b.firebaseapp.com",
+  projectId: "test1216-2139b",
+  storageBucket: "test1216-2139b.appspot.com",
+  messagingSenderId: "196578879878",
+  appId: "1:196578879878:web:a47eb96113d35090c4a407",
+  measurementId: "G-GNQMWLKCX0"
 };
 
-// TODO
 // Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore();
+const auth = getAuth();
+const provider = new GoogleAuthProvider();
 
 // google popup window login
 window.logIn = async function logIn() {
   // TODO
   // sign in
+  await setPersistence(auth, inMemoryPersistence)
+  .then(() => {
+    const provider = new GoogleAuthProvider();
+    return(
+      signInWithPopup(auth, provider)
+      .then((result) => {
+        // This gives you a Google Access Token. You can use it to access the Google API.
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential.accessToken;
+        // The signed-in user info.
+        const user = result.user;
+        // ...
+        setCookie('username', result.user.displayName);
+        setCookie('userPhotoURL', result.user.photoURL);
+        setCookie('uid', result.user.uid);
+      }).catch((error) => {
+        // Handle Errors here.
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        // The email of the user's account used.
+        const email = error.email;
+        // The AuthCredential type that was used.
+        const credential = GoogleAuthProvider.credentialFromError(error);
+        // ...
+      })
+    );
+  })
 
-  // setCookie('username', result.user.displayName);
-  // setCookie('userPhotoURL', result.user.photoURL);
-  // setCookie('uid', result.user.uid);
+
 
   if (getCookie('username') != '') {
     document.getElementById('accountDisplay').innerHTML =
@@ -54,7 +88,11 @@ window.logOut = function logOut() {
 
   // TODO
   // sign out
-
+  signOut(auth).then(() => {
+    // Sign-out successful.
+  }).catch((error) => {
+    // An error happened.
+  });
   // Simulate a mouse click:
   window.location.href = `${window.location.href}`;
 }
@@ -68,6 +106,13 @@ window.addNewPost = async function addNewPost(post) {
       // TODO
       // addDoc
       // Hint: const docRef = ...;
+      const docRef = await addDoc(collection(db, "posts"), {
+        userPhotoURL: getCookie('userPhotoURL'),
+        username: getCookie('username'),
+        author_uid: getCookie('uid'),
+        post: post,
+        createAt: new Date()
+      });
       console.log("Document written with ID: ", docRef.id);
       // Simulate a mouse click:
       window.location.href = "./index.html";
@@ -85,6 +130,8 @@ window.getPosts = async function getPosts(postTimeLine) {
     // TODO
     // get collection of posts named querySnapshot
     // Hint: const querySnapshot = ...;
+    const q = query(collection(db, "posts"), orderBy("createAt", "desc"));
+    const querySnapshot = await getDocs(q);
     // level 2: order by creat time (dec)
     querySnapshot.forEach((doc) => {
       var date = new Date(doc.data().createAt.seconds * 1000);
@@ -133,6 +180,8 @@ window.getPersonPosts = async function getPersonPosts(personTimeLine) {
       // TODO
       // get collection of posts (author is the user) named querySnapshot
       // Hint: const querySnapshot = ...;
+      const q = query(collection(db, "posts"), where("username", "==", username), orderBy("createAt", "desc"));
+      const querySnapshot = await getDocs(q);
       // level 2: order by creat time (dec)
       querySnapshot.forEach((doc) => {
         var date = new Date(doc.data().createAt.seconds * 1000);
@@ -177,6 +226,7 @@ window.getPersonPosts = async function getPersonPosts(personTimeLine) {
 window.deletePost = async function deletePost(PostId) {
   // TODO
   // delete the post
+  await deleteDoc(doc(db, "posts", PostId))
   const postElement = document.getElementById(`post:${PostId}`);
   postElement.innerHTML = '';
   postElement.classList = [];
